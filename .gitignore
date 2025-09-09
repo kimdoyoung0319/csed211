@@ -1,0 +1,6 @@
+*.aux
+*.log
+upload
+.*
+!.gitignore
+!.clang-format

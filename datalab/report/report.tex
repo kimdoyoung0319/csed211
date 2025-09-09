@@ -1,0 +1,164 @@
+\documentclass{article}
+\def\til{\texttt{\~}}
+
+\title{\textbf{2025 Introduction to Computer Software Systems Lab Assignment
+\#1}}
+\date{September 8, 2025}
+\author{Doyoung Kim}
+
+\begin{document}
+\maketitle
+
+This assignment focuses on understanding the integer datatypes of the C
+programming language and utilizing bitwise operations. To achieve this, it
+requires the implementation of the following five functions:
+
+\begin{enumerate}
+    \item[\texttt{bitNor}] Implement a bitwise NOR operator using only the 
+    bitwise NOT and AND operators.
+    \item[\texttt{isZero}] Determine if a given argument is zero, using a 
+    maximum of two operators.
+    \item[\texttt{addOK}] Verify if the addition of two integers incurs an
+    overflow.
+    \item[\texttt{absVal}] Compute the absolute value of an integer using a
+    restricted set of bitwise and arithmetic operators.
+    \item[\texttt{logicalShift}] Implement a logical right shift operation
+    without using type casting to an unsigned integer.
+\end{enumerate}
+
+This report will discuss the implementation details and the underlying
+principles of two's complement integer arithmetic as it applies to computer
+systems and the C programming language. The semantics of individual bitwise
+operators will not be detailed, as they are covered comprehensively in the
+course lecture notes and textbook.
+
+\section{Implementation}
+
+\subsection{Function \texttt{bitNor}}
+
+This task requires the implementation of a bitwise NOR operator. This is
+accomplished by applying De Morgan's laws, which state that
+$\neg(P \lor Q) \iff (\neg P \land \neg Q)$. The bitwise equivalent is
+\texttt{\til(x | y) == \til x \& \til y}.
+
+\begin{verbatim}
+int bitNor(int x, int y) { return ~x & ~y; }
+\end{verbatim}
+
+\subsection{Function \texttt{isZero}}
+
+This function must check if an integer is zero, returning \verb|1| if true and
+\verb|0| otherwise. The logical NOT operator (\verb|!|) in C performs this exact
+operation, yielding the most direct implementation.
+
+\begin{verbatim}
+int isZero(int x) { return !x; }
+\end{verbatim}
+
+\subsection{Function \texttt{addOK}}
+
+In this task, an integer addition must be checked for overflow using only
+bitwise and a limited set of other operations. The key observation is that an
+addition between two integers with different signs will not result in an
+overflow. If the two operands share the same sign, an overflow occurs if and 
+only if the sign of the sum differs from the sign of the operands.
+
+This implementation extracts the sign bit of the two operands and their sum. It
+first checks if the operand signs differ. If they are identical, it then
+compares the sign of the sum to the sign of the operands to detect an overflow.
+
+\begin{verbatim}
+int addOK(int x, int y) {
+    int x_sign = x >> 31 & 1;
+    int y_sign = y >> 31 & 1;
+    int sum_sign = (x + y) >> 31 & 1;
+
+    return (x_sign ^ y_sign) | !(sum_sign ^ x_sign);
+}
+\end{verbatim}
+
+\subsection{Function \texttt{absVal}}
+
+This function computes the absolute value of an integer. The strategy leverages
+the behavior of the arithmetic right shift on signed integers. Shifting a signed
+integer by 31 bits generates a mask of all ones (\verb|0xFFFFFFFF|) for a
+negative number and all zeros (\verb|0x00000000|) for a non-negative number.
+
+This mask can then be used to select between two values: the original number 
+\verb|x| (if non-negative) or its two's complement negation \verb|~x + 1| (if 
+negative).
+
+\begin{verbatim}
+int absVal(int x) {
+    int mask = x >> 31;
+    return (mask & (~x + 1)) | (~mask & x);
+}
+\end{verbatim}
+
+\subsection{Function \texttt{logicalShift}}
+
+The right shift operator in C performs an arithmetic shift on signed datatypes.
+The objective here is to implement a logical right shift. The strategy is to
+perform an arithmetic shift and then clear the most significant \verb|n| bits, 
+which may have been filled with ones if the operand was negative.
+
+To achieve this, a mask for the upper \verb|n| bits is generated using the 
+expression \verb|(1 << 31) >> (n - 1)|. A notable edge case is \verb|n = 0|, 
+where a right shift by -1 would occur, invoking undefined behavior. To address 
+this, a secondary mask is created to bypass the operation entirely when \verb|n| 
+is zero, returning the original value \verb|x|.
+
+\begin{verbatim}
+int logicalShift(int x, int n) {
+    int mask = (1 << 31) >> (n + ~0);
+    int is_zero = !!n << 31 >> 31;
+    return (~is_zero & x) | (is_zero & ((x >> n) & ~mask));
+}
+\end{verbatim}
+
+\section{Result and Discussion}
+
+The execution of the \verb|driver.pl| script confirms that all implemented
+functions pass the required correctness and performance tests.
+
+\begin{verbatim}
+[d0319@programming2 datalab]$ ./driver.pl
+...
+Score = 22/22 [12/12 Corr + 10/10 Perf] (37 total operators)
+\end{verbatim}
+
+Although the implementations are correct and satisfy all constraints, they
+possess a significant flaw: the code relies heavily on the assumption that the
+\verb|int| datatype is 32 bits wide. This is evident in the use of hardcoded
+constants like `31` for shift operations.
+
+The C standard only guarantees that an \verb|int| is a signed integer with a
+size of at least 16 bits; it does not mandate a 32-bit width. This dependency
+compromises the portability of the code, as it would produce incorrect results
+on systems where \verb|sizeof(int)| is not 4.
+
+This limitation is fundamental under the assignment's constraints, which forbid
+the use of the \verb|sizeof| operator or other mechanisms for determining the
+bit-width of the datatype at runtime.
+
+\section{Conclusion}
+
+This assignment was successfully completed, with all functions passing the
+required correctness and performance benchmarks. The exercise provided
+practical experience in low-level data manipulation, reinforcing key concepts
+such as two's complement arithmetic, bitwise operations, and the behavior of
+signed integers in C.
+
+A critical insight from this lab is the distinction between a correct 
+implementation and a portable one. The solutions, while functional within the
+assumed 32-bit environment, are inherently non-portable due to hardcoded 
+bit-width dependencies. This underscores a fundamental challenge in systems 
+programming: creating robust software that is abstracted from the specifics of 
+the underlying hardware.
+
+Ultimately, this assignment demonstrates not only how to manipulate data at the 
+bit-level but also illuminates the critical importance of platform assumptions 
+in software development. The strict constraints highlight the trade-offs that 
+engineers face between performance, elegance, and portability.
+
+\end{document}
