@@ -1,8 +1,8 @@
-/* 
- * CS:APP Data Lab 
- * 
+/*
+ * CS:APP Data Lab
+ *
  * <Please put your name and userid here>
- * 
+ *
  * bits.c - Source file with your solutions to the Lab.
  *          This is the file you will hand in to your instructor.
  *
@@ -10,7 +10,7 @@
  * compiler. You can still use printf for debugging without including
  * <stdio.h>, although you might get a compiler warning. In general,
  * it's not good practice to ignore compiler warnings, but in this
- * case it's OK.  
+ * case it's OK.
  */
 
 #if 0
@@ -129,7 +129,6 @@ NOTES:
  *      the correct answers.
  */
 
-
 #endif
 /* Copyright (C) 1991-2018 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
@@ -167,27 +166,30 @@ NOTES:
    - 285 hentaigana
    - 3 additional Zanabazar Square characters */
 /* We do not support C11 <threads.h>.  */
-/* 
- * negate - return -x 
+
+/*
+ * negate - return -x
  *   Example: negate(1) = -1.
  *   Legal ops: ! ~ & ^ | + << >>
  *   Max ops: 5
  *   Rating: 2
  */
-int negate(int x) {
-  return 2;
-}
-/* 
- * isLess - if x < y  then return 1, else return 0 
+int negate(int x) { return ~x + 1; }
+
+/*
+ * isLess - if x < y  then return 1, else return 0
  *   Example: isLess(4,5) = 1.
  *   Legal ops: ! ~ & ^ | + << >>
  *   Max ops: 24
  *   Rating: 3
  */
 int isLess(int x, int y) {
-  return 2;
+    int sign_diff = ((x ^ y) >> 31) & 1;
+    return (sign_diff & !(y >> 31)) |
+           ((!sign_diff) & ((x + (~y + 1)) >> 31 & 1));
 }
-/* 
+
+/*
  * float_abs - Return bit-level equivalent of absolute value of f for
  *   floating point argument f.
  *   Both the argument and result are passed as unsigned int's, but
@@ -199,9 +201,16 @@ int isLess(int x, int y) {
  *   Rating: 2
  */
 unsigned float_abs(unsigned uf) {
-  return 2;
+    unsigned mask_exp = 0xFF << 23;
+
+    /* Check if `uf` is NaN. */
+    if ((uf & mask_exp) == mask_exp && (uf & 0x007FFFFF) != 0)
+        return uf;
+
+    return 0x7FFFFFFF & uf;
 }
-/* 
+
+/*
  * float_twice - Return bit-level equivalent of expression 2*f for
  *   floating point argument f.
  *   Both the argument and result are passed as unsigned int's, but
@@ -213,9 +222,29 @@ unsigned float_abs(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_twice(unsigned uf) {
-  return 2;
+    unsigned mask_exp = 0xFF << 23;
+    unsigned exp = uf & mask_exp;
+
+    /* If `exp` is all ones or `uf` is zero, then return `uf` as is since
+       multiplying 2 to infinities, NaN, or zero would have no effect. */
+    if (exp == mask_exp || (uf & 0x7FFFFFFF) == 0)
+        return uf;
+
+    if (exp == 0)
+        return (uf & 0x80000000) | (uf << 1);
+
+    exp += 1 << 23;
+
+    /* If the incremented result is all ones, the result is overflowed to
+       infinity. Zero out the fractional bits to prevent it from being confused
+       with NaN. */
+    if (exp == mask_exp)
+        return (uf & (1 << 31)) | mask_exp;
+    else
+        return (uf & ~mask_exp) | exp;
 }
-/* 
+
+/*
  * float_i2f - Return bit-level equivalent of expression (float) x
  *   Result is returned as unsigned int, but
  *   it is to be interpreted as the bit-level representation of a
@@ -225,9 +254,45 @@ unsigned float_twice(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
-  return 2;
+    unsigned frac, exp, round, sticky, increment = 0;
+
+    if (x == 0)
+        return 0;
+
+    if (x < 0)
+        frac = -x;
+    else
+        frac = x;
+
+    /* Sum of bias and fractional bits for single precision floats. */
+    exp = 159;
+
+    /* Make sure that MSB of `frac` is 1. */
+    while ((frac & 0x80000000) == 0) {
+        frac <<= 1;
+        exp--;
+    }
+
+    /* Shift left once again since floats assume leading zero in its fractional
+       bits. */
+    frac <<= 1;
+    exp--;
+
+    /* Perform rounding for thoes numbers that are not exactly representable
+       with only 24 bits. */
+    round = frac & 0x100;
+    sticky = frac & 0xFF;
+
+    if (round && !sticky)
+        increment = (frac & 0x200) != 0;
+    else if (round && sticky)
+        increment = 1;
+
+    frac >>= 9;
+    return ((x & 0x80000000) | (exp << 23) | frac) + increment;
 }
-/* 
+
+/*
  * float_f2i - Return bit-level equivalent of expression (int) f
  *   for floating point argument f.
  *   Argument is passed as unsigned int, but
@@ -240,5 +305,56 @@ unsigned float_i2f(int x) {
  *   Rating: 4
  */
 int float_f2i(unsigned uf) {
-  return 2;
+    int exp;
+    unsigned integral, fractional, round, sticky, increment = 0;
+
+    if ((uf & 0x7FFFFFFF) == 0)
+        return 0;
+
+    exp = ((uf & 0x7F800000) >> 23) - 127;
+
+    /* If the exponent is less than zero, than it would be rounded to zero
+       anyway.*/
+    if (exp < 0)
+        return 0;
+
+    integral = 1;
+    fractional = (uf & 0x007FFFFF) << 9;
+
+    while (exp != 0) {
+        /* The second of integral part is nonzero and the shift would incur
+           overflow. Note that here we examine the second bit, not the first one
+           since the result is a signed integer, hence we need one bit reserved
+           for sign bit with negative weight. */
+        /* Note: Casting floats that are out of integer range is UB, hence might
+           yield different result on different machines. The testing program
+           must handle this properly, but they used cast-to-int operator like an
+           idiot. Hence, this passes test on x86-64 machines, but not in some
+           ARM machines, which respect sign when the operand is out-of-range.
+         */
+        if ((integral & 0x40000000) != 0)
+            return 0x80000000;
+
+        /* Shift the concatenation of integral part and fractional part by
+           one. */
+        integral <<= 1;
+        integral |= (fractional & 0x80000000) != 0;
+        fractional <<= 1;
+
+        exp--;
+    }
+
+    /* Perform rounding. */
+    round = fractional & 0x80000000;
+    sticky = (fractional & 0x7FFFFFFF) != 0;
+
+    if (round && !sticky)
+        increment = integral & 1;
+    else if (round && sticky)
+        increment = 1;
+
+    if (uf & 0x80000000)
+        return -(integral + increment);
+    else
+        return integral + increment;
 }
