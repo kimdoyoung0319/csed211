@@ -2,5 +2,6 @@
 *.log
 upload
 .*
+*.dSYM
 !.gitignore
 !.clang-format
