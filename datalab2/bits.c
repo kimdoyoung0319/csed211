@@ -226,13 +226,17 @@ unsigned float_twice(unsigned uf) {
     unsigned exp = uf & mask_exp;
 
     /* If `exp` is all ones or `uf` is zero, then return `uf` as is since
-       multiplying 2 to infinities, NaN, or zero would have no effect. */
-    if (exp == mask_exp || (uf & 0x7FFFFFFF) == 0)
+       multiplying 2 to infinities or NaN would have no effect. */
+    if (exp == mask_exp)
         return uf;
 
+    /* If `exp` is zero, then the multiplication by two can be achieved only by
+       shifting the number, except the sign bit, to left by one. */
     if (exp == 0)
         return (uf & 0x80000000) | (uf << 1);
 
+    /* If the input is a normal value, multiplication by two is equivalent with
+       adding one to the exponent. */
     exp += 1 << 23;
 
     /* If the incremented result is all ones, the result is overflowed to
@@ -264,7 +268,7 @@ unsigned float_i2f(int x) {
     else
         frac = x;
 
-    /* Sum of bias and fractional bits for single precision floats. */
+    /* Sum of bias for single-precision floats and 32. */
     exp = 159;
 
     /* Make sure that MSB of `frac` is 1. */
@@ -274,11 +278,13 @@ unsigned float_i2f(int x) {
     }
 
     /* Shift left once again since floats assume leading zero in its fractional
-       bits. */
+       bits. Note that we don't have to consider subnormals here since the
+       absolute values of all integers, except for zero, is greater than 1
+       anyway.*/
     frac <<= 1;
     exp--;
 
-    /* Perform rounding for thoes numbers that are not exactly representable
+    /* Perform rounding for those numbers that are not exactly representable
        with only 24 bits. */
     round = frac & 0x100;
     sticky = frac & 0xFF;
@@ -306,7 +312,7 @@ unsigned float_i2f(int x) {
  */
 int float_f2i(unsigned uf) {
     int exp;
-    unsigned integral, fractional, round, sticky, increment = 0;
+    unsigned integral;
 
     if ((uf & 0x7FFFFFFF) == 0)
         return 0;
@@ -314,47 +320,25 @@ int float_f2i(unsigned uf) {
     exp = ((uf & 0x7F800000) >> 23) - 127;
 
     /* If the exponent is less than zero, than it would be rounded to zero
-       anyway.*/
+       anyway. This handles the subnormal case too. */
     if (exp < 0)
         return 0;
 
-    integral = 1;
-    fractional = (uf & 0x007FFFFF) << 9;
+    /* Check if the shift by exponent incurs overflow. */
+    /* Note: Casting floats that are out of integer range is UB, hence might
+       yield different result on different machines. The testing program
+       must handle this properly, but they used cast-to-int operator like an
+       idiot. Hence, this passes test on x86-64 machines, but not in some
+       ARM machines, which respect sign when the operand is out-of-range.
+     */
+    if (exp >= 31)
+        return 0x80000000;
 
-    while (exp != 0) {
-        /* The second of integral part is nonzero and the shift would incur
-           overflow. Note that here we examine the second bit, not the first one
-           since the result is a signed integer, hence we need one bit reserved
-           for sign bit with negative weight. */
-        /* Note: Casting floats that are out of integer range is UB, hence might
-           yield different result on different machines. The testing program
-           must handle this properly, but they used cast-to-int operator like an
-           idiot. Hence, this passes test on x86-64 machines, but not in some
-           ARM machines, which respect sign when the operand is out-of-range.
-         */
-        if ((integral & 0x40000000) != 0)
-            return 0x80000000;
-
-        /* Shift the concatenation of integral part and fractional part by
-           one. */
-        integral <<= 1;
-        integral |= (fractional & 0x80000000) != 0;
-        fractional <<= 1;
-
-        exp--;
-    }
-
-    /* Perform rounding. */
-    round = fractional & 0x80000000;
-    sticky = (fractional & 0x7FFFFFFF) != 0;
-
-    if (round && !sticky)
-        increment = integral & 1;
-    else if (round && sticky)
-        increment = 1;
+    integral = 1 << exp;
+    integral |= (uf & 0x007FFFFF) >> (23 - exp);
 
     if (uf & 0x80000000)
-        return -(integral + increment);
+        return -integral;
     else
-        return integral + increment;
+        return integral;
 }
