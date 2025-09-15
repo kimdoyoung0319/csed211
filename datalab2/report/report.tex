@@ -37,7 +37,7 @@ single-precision float is as follows:
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=.75\textwidth]{figure1.png}
+    \includegraphics[width=1\textwidth]{figure1.png}
     \caption{
         Bit-level representation of an IEEE 754 single-precision floating-point 
         number.
@@ -139,25 +139,16 @@ unsigned float_twice(unsigned uf) {
     unsigned mask_exp = 0xFF << 23;
     unsigned exp = uf & mask_exp;
 
-    /* If `exp` is all ones or `uf` is zero, then return `uf` as is since
-       multiplying 2 to infinities or NaN would have no effect. */
     if (exp == mask_exp)
         return uf;
 
-    /* If `exp` is zero, then the multiplication by two can be achieved only by
-       shifting the number, except the sign bit, to left by one. */
     if (exp == 0)
         return (uf & 0x80000000) | (uf << 1);
 
-    /* If the input is a normal value, multiplication by two is equivalent with
-       adding one to the exponent. */
     exp += 1 << 23;
 
-    /* If the incremented result is all ones, the result is overflowed to
-       infinity. Zero out the fractional bits to prevent it from being confused
-       with NaN. */
     if (exp == mask_exp)
-        return (uf & (1 << 31)) | mask_exp;
+        return (uf & 0x80000000) | mask_exp;
     else
         return (uf & ~mask_exp) | exp;
 }
@@ -170,7 +161,7 @@ involves determining the final sign, exponent, and fraction, as well as
 performing rounding for values that cannot be represented precisely.
 
 This implementation correctly determines the components and then performs 
-rounding according to the **round-to-nearest, ties-to-even** principle. It 
+rounding according to the \textbf{round-to-nearest, ties-to-even} principle. It 
 examines the round bit (the first bit shifted out) and the sticky bit 
 (the logical OR of all subsequent shifted-out bits) to decide if the fraction 
 needs to be incremented. In a tie situation, the final bit of the fraction 
@@ -197,15 +188,9 @@ unsigned float_i2f(int x) {
         exp--;
     }
 
-    /* Shift left once again since floats assume leading zero in its fractional
-       bits. Note that we don't have to consider subnormals here since the
-       absolute values of all integers, except for zero, is greater than 1
-       anyway.*/
     frac <<= 1;
     exp--;
 
-    /* Perform rounding for those numbers that are not exactly representable
-       with only 24 bits. */
     round = frac & 0x100;
     sticky = frac & 0xFF;
 
@@ -226,12 +211,12 @@ reconstructing the integer value from the float's sign, exponent, and fraction.
 The value can be reconstructed by shifting the implicit `1` and the fractional 
 bits left by a number of positions dictated by the exponent.
 
-A key aspect of this conversion in C is that it performs **truncation** 
+A key aspect of this conversion in C is that it performs \textbf{truncation} 
 (rounding toward zero). Therefore, no rounding logic is required. After the 
 integer part is reconstructed, the final result is obtained by negating it if 
 the original float was negative. The implementation also correctly handles 
-overflow by returning `0x80000000` for values outside the representable range of 
-a 32-bit signed integer.
+overflow by returning \texttt{0x80000000} for values outside the representable 
+range of a 32-bit signed integer.
 
 \begin{verbatim}
 int float_f2i(unsigned uf) {
@@ -243,12 +228,9 @@ int float_f2i(unsigned uf) {
 
     exp = ((uf & 0x7F800000) >> 23) - 127;
 
-    /* If the exponent is less than zero, than it would be rounded to zero
-       anyway. This handles the subnormal case too. */
     if (exp < 0)
         return 0;
 
-    /* Check if the shift by exponent incurs overflow. */
     if (exp >= 31)
         return 0x80000000;
 

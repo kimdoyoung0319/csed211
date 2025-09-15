@@ -3,6 +3,7 @@
 #include <string.h>
 
 const unsigned SIGN_MASK = 1u << 31;
+const unsigned MSB_MASK = SIGN_MASK;
 const unsigned EXP_MASK = ((1u << 8) - 1) << 23;
 const unsigned FRAC_MASK = (1u << 23) - 1;
 
@@ -37,13 +38,13 @@ void unsigned_to_bin(char *buf, unsigned x) {
 
     int i, len = 32;
 
-    while ((x & (1u << 31)) == 0) {
+    while ((x & MSB_MASK) == 0) {
         x <<= 1;
         len--;
     }
 
     for (i = 0; i < len; i++) {
-        buf[i] = x & (1u << 31) ? '1' : '0';
+        buf[i] = x & MSB_MASK ? '1' : '0';
         x <<= 1;
     }
 

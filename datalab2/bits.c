@@ -243,7 +243,7 @@ unsigned float_twice(unsigned uf) {
        infinity. Zero out the fractional bits to prevent it from being confused
        with NaN. */
     if (exp == mask_exp)
-        return (uf & (1 << 31)) | mask_exp;
+        return (uf & 0x80000000) | mask_exp;
     else
         return (uf & ~mask_exp) | exp;
 }
