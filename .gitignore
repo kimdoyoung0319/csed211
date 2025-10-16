@@ -5,3 +5,4 @@ upload
 *.dSYM
 !.gitignore
 !.clang-format
+slides/
