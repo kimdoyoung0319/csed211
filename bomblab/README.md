@@ -4,7 +4,7 @@
     -   The original executable and source provided by the instructor.
 -   `answer.txt`
     -   The answer file that can be passed to the bomb binary.
-    -   You can pass it to the bomb binary using `bomb answer.txt`.
+    -   You can pass it to the bomb using `bomb answer.txt`.
 -   `phases.c`
     -   The (hypothetical) C code that would have been the original source
         before compilation.
@@ -21,12 +21,13 @@
 
 ## Warnings for Future Students
 
--   The binary bombs distributed to students are different for each student.
+-   Bombs distributed to students are different for each student.
 -   Hence, the `answer.txt` file may be incorrect for your bomb executable.
--   Also, I've seen instructors slightly modify the logic of the code.
-    -   For example, the solution of the fourth phase were originally a
-        fibonacci sequence, but here they modified the logic.
+-   Also, I've seen instructors slightly modifying the logic of the code.
+    -   The original correct sequence for phase 4 was the Fibonacci sequence,
+        but it has now been changed to a (similar but) different sequence.
     -   In extreme cases, your instructor might try to invalidate all those
         decompiled source by fully rewriting the source file!
--   So, think twice if you are just naively trying to copy & paste the answer
-    file or assuming that the core logic of the code will remain same.
+-   So, think twice if you are just naively trying to copy & paste the
+    `answer.txt` file or assuming that the core logic of the code will remain
+    same.
