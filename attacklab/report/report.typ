@@ -10,7 +10,20 @@
 )
 
 #show raw: set text(font: "CMU Typewriter Text", size: 10pt)
+#show list: it => [
+  #v(0.65em)
+  #it
+  #v(0.65em)
+]
+#show enum: it => [
+  #v(0.65em)
+  #it
+  #v(0.65em)
+]
+
 #set figure(gap: 2em)
+#set list(spacing: 1em)
+#set enum(spacing: 1em)
 
 #maketitle(
   title: text(
@@ -204,7 +217,6 @@ b8 17 40 00 00 00 00 00 /* Address of touch2. */
 Phase 5 requires invoking `touch3` using ROP. Several constraints complicate a
 naive implementation:
 
-#linebreak()
 - ASLR prevents the attacker from embedding absolute stack addresses in the
   attack string.
 - The cookie string requires a null terminator. Because the cookie string is 9
@@ -214,13 +226,11 @@ naive implementation:
 - The attacker must compute the cookie address relative to `%rsp` because
   placing the cookie immediately after the return address and using `%rsp`
   directly as a pointer typically causes segmentation faults in ROP chains.
-#linebreak()
 
 A useful facility is the existing function `add_xy`, which computes the quadword
 sum of two arguments and stores the result in `%rax`. A single `ret` instruction
 is located at `0x401a00`. The planned gadget sequence therefore:
 
-#linebreak()
 + Save `%rsp` into a register $x$ (so the base of the stack can be referenced).
 + Move $x$ into `%rdi`.
 + Use a `popq` gadget to load a precomputed offset from the stack into a second
@@ -229,7 +239,6 @@ is located at `0x401a00`. The planned gadget sequence therefore:
 + Call `add_xy` to compute `%rdi + %rsi` → `%rax`.
 + Move `%rax` to `%rdi`.
 + Call `touch3`.
-#linebreak()
 
 This plan avoids reliance on absolute stack addresses by computing the cookie's
 address at runtime from the current `%rsp`. The attack string below implements
