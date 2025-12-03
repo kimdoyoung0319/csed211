@@ -12,6 +12,126 @@
 
 int is_transpose(int M, int N, int A[N][M], int B[M][N]);
 
+void transpose_32(int M, int N, int A[N][M], int B[M][N]) {
+    int ib, jb, i, j, temp;
+
+    for (ib = 0; ib < N; ib += 8) {
+        for (jb = 0; jb < M; jb += 8) {
+            for (i = ib; i < ib + 8 && i < N; i++) {
+                for (j = jb; j < jb + 8 && j < M; j++) {
+                    if (i == j)
+                        temp = A[i][j];
+                    else
+                        B[j][i] = A[i][j];
+                }
+
+                if (ib == jb)
+                    B[i][i] = temp;
+            }
+        }
+    }
+}
+
+void transpose_64(int M, int N, int A[N][M], int B[M][N]) {
+    int i, j, k, t0, t1, t2, t3, t4, t5, t6, t7;
+
+    for (j = 0; j < N; j += 8) {
+        for (i = 0; i < M; i += 8) {
+            for (k = 0; k < 4; k += 2) {
+                t0 = A[i + k][j + 0];
+                t1 = A[i + k][j + 1];
+                t2 = A[i + k][j + 2];
+                t3 = A[i + k][j + 3];
+                t4 = A[i + k + 1][j + 0];
+                t5 = A[i + k + 1][j + 1];
+                t6 = A[i + k + 1][j + 2];
+                t7 = A[i + k + 1][j + 3];
+
+                B[j + 0][i + k] = t0;
+                B[j + 1][i + k] = t1;
+                B[j + 2][i + k] = t2;
+                B[j + 3][i + k] = t3;
+                B[j + 0][i + k + 1] = t4;
+                B[j + 1][i + k + 1] = t5;
+                B[j + 2][i + k + 1] = t6;
+                B[j + 3][i + k + 1] = t7;
+            }
+
+            for (k = 0; k < 4; k += 2) {
+                t0 = A[i + k][j + 4];
+                t1 = A[i + k][j + 5];
+                t2 = A[i + k][j + 6];
+                t3 = A[i + k][j + 7];
+                t4 = A[i + k + 1][j + 4];
+                t5 = A[i + k + 1][j + 5];
+                t6 = A[i + k + 1][j + 6];
+                t7 = A[i + k + 1][j + 7];
+
+                B[j + 0][i + 4 + k] = t0;
+                B[j + 1][i + 4 + k] = t1;
+                B[j + 2][i + 4 + k] = t2;
+                B[j + 3][i + 4 + k] = t3;
+                B[j + 0][i + 4 + k + 1] = t4;
+                B[j + 1][i + 4 + k + 1] = t5;
+                B[j + 2][i + 4 + k + 1] = t6;
+                B[j + 3][i + 4 + k + 1] = t7;
+            }
+
+            for (k = 0; k < 4; k++) {
+                t0 = B[j + k][i + 4];
+                t1 = B[j + k][i + 5];
+                t2 = B[j + k][i + 6];
+                t3 = B[j + k][i + 7];
+                t4 = A[i + 4][j + k];
+                t5 = A[i + 5][j + k];
+                t6 = A[i + 6][j + k];
+                t7 = A[i + 7][j + k];
+
+                B[j + k][i + 4] = t4;
+                B[j + k][i + 5] = t5;
+                B[j + k][i + 6] = t6;
+                B[j + k][i + 7] = t7;
+                B[j + k + 4][i + 0] = t0;
+                B[j + k + 4][i + 1] = t1;
+                B[j + k + 4][i + 2] = t2;
+                B[j + k + 4][i + 3] = t3;
+            }
+
+            for (k = 4; k < 8; k++) {
+                t0 = A[i + k][j + 4];
+                t1 = A[i + k][j + 5];
+                t2 = A[i + k][j + 6];
+                t3 = A[i + k][j + 7];
+
+                B[j + 4][i + k] = t0;
+                B[j + 5][i + k] = t1;
+                B[j + 6][i + k] = t2;
+                B[j + 7][i + k] = t3;
+            }
+        }
+    }
+}
+
+void transpose_61(int M, int N, int A[N][M], int B[M][N]) {
+    int ib, jb, i, j, temp;
+
+    for (ib = 0; ib < N; ib += 16) {
+        for (jb = 0; jb < M; jb += 16) {
+            for (i = ib; i < ib + 16 && i < N; i++) {
+                for (j = jb; j < jb + 16 && j < M; j++) {
+                    if (i == j)
+                        temp = A[i][j];
+                    else
+                        B[j][i] = A[i][j];
+                }
+
+                if (ib == jb)
+                    B[i][i] = temp;
+            }
+        }
+    }
+}
+
 /*
  * transpose_submit - This is the solution transpose function that you
  *     will be graded on for Part B of the assignment. Do not change
@@ -20,7 +140,14 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
  *     be graded.
  */
 char transpose_submit_desc[] = "Transpose submission";
-void transpose_submit(int M, int N, int A[N][M], int B[M][N]) {}
+void transpose_submit(int M, int N, int A[N][M], int B[M][N]) {
+    if (M == 32)
+        transpose_32(M, N, A, B);
+    else if (M == 64)
+        transpose_64(M, N, A, B);
+    else
+        transpose_61(M, N, A, B);
+}
 
 /*
  * You can define additional transpose functions below. We've defined
