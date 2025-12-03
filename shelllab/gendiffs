@@ -1,0 +1,27 @@
+#!/bin/bash
+
+scriptdir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+outdir="$scriptdir/out"
+diffs="$outdir/diffs.txt"
+
+mkdir -p $outdir
+
+if [ -e $diffs ]; then
+    rm -f $diffs
+fi
+
+for i in {00..16}; do
+    echo "Generating output for test $i"
+
+    make rtest$i >$outdir/rtest$i.txt 2>/dev/null
+    echo "Finished generating reference output for test $i"
+    make test$i >$outdir/test$i.txt 2>/dev/null
+    echo "Finished generating submission output for test $i"
+
+    echo "Test $i" >> $diffs
+    diff $outdir/rtest$i.txt $outdir/test$i.txt >> $diffs
+    echo "" >> $diffs
+    
+    echo ""
+done
+
