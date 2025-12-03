@@ -28,7 +28,7 @@
 #maketitle(
   title: text(
     size: 16pt,
-    strong("2025 Introduction to Computer Software Systems Lab Assignment #3"),
+    strong("2025 Introduction to Computer Software Systems Lab Assignment #4"),
   ),
   authors: ("Doyoung Kim",),
   date: datetime.today().display("[month repr:long] [day], [year]"),
